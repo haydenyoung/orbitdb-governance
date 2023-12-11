@@ -1,8 +1,8 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers.js";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs.js";
 import { expect } from "chai";
-import { createProposerOrbitDB, createVoterOrbitDB  } from "./utils/fixtures/orbitdb.js"
 import { useAccessController, Documents } from "@orbitdb/core"
+import { createProposerOrbitDB, createVoterOrbitDB  } from "./utils/fixtures/orbitdb.js"
 import GovernorAccessController from './utils/governor-access-controller.js'
 import { owner, proposer, voter1, deployGovernorFixture, deployTokenLockFixture } from './utils/fixtures/contracts.js'
 
@@ -16,9 +16,9 @@ describe("Governor", function () {
 
   describe("Deployment", function () {
     it("should set the right owner", async function () {
-      expect(await governor.owner()).to.equal(owner.address)
-    });
-  });
+      expect(await governor.owner()).to.equal(proposer.address)
+    })
+  })
 
   describe("Governance", function () {
     let orbitdb1
@@ -29,7 +29,6 @@ describe("Governor", function () {
 
     after(async function () {
       await orbitdb1.stop()
-      await orbitdb1.ipfs.stop()
     })
 
     let proposals, votes
@@ -62,18 +61,18 @@ describe("Governor", function () {
 
     describe("Proposals", function () {
       it("should put forward a proposal", async function () {
-        const governor = await loadFixture(deployGovernorFixture);
+        const governor = await loadFixture(deployGovernorFixture)
 
         const proposal = { _id: 1, title, description, votes_db_address: votes.address }
         const proposalHash = await proposals.put(proposal)
 
-        await governor.connect(proposer).propose(proposer, proposals.address, proposalHash)
+        await governor.connect(proposer).propose(proposalHash)
 
-        const expected = { proposer, dbAddress: proposals.address, proposalHash }
+        const expected = { index: (await governor.proposalsIndex).length - 1 }
 
-        expect(await governor.proposals[0], expected)
-      });
-    });
+        expect(await governor.proposals(ethers.solidityPackedKeccak256(['string'], [proposalHash])), expected)
+      })
+    })
 
     describe("Voting", function () {
       let orbitdb2
@@ -103,38 +102,53 @@ describe("Governor", function () {
         const proposal = { _id: 1, title, description, votes_db_address: votes.address }
 
         proposalHash = await proposals.put(proposal)
-
-        await governor.connect(proposer).propose(proposer, proposals.address, proposalHash)
+        await governor.connect(proposer).propose(proposalHash)
       })
 
       it("should hash votes", async function () {
         const governor = await loadFixture(deployGovernorFixture);
-
-        const hash = await governor.hashVotes([{ voter: voter1, tokens: 1 }])
+        const hash = await governor.hashVotes([{ voter: voter1, tokens: 1, selection: 1 }])
         expect(hash, '0xabb0b6ee61567830244e44200caf8fcbfa6cdc9768ff24bf53881460f3cd58f7')
       });
 
       it("should ratify a proposal", async function () {
         const governor = await loadFixture(deployGovernorFixture);
 
-        await votes.put({ voter: await voter1.getAddress(), tokens: 10 })
+        await votes.put({ voter: await voter1.getAddress(), tokens: 10, selection: 1 })
 
         const hash = await governor.hashVotes((await votes.all()).map(e => e.value))
 
         const signedMessage = await proposer.signMessage(hash)
 
-        await governor.connect(proposer).ratify(0, signedMessage)
+        await governor.connect(proposer).ratify(proposalHash, signedMessage)
 
-        const ratification = governor.ratifications[0]
+        const ratification = (await governor.proposals(ethers.solidityPackedKeccak256(['string'], [proposalHash]))).ratified
 
         expect(ratification, signedMessage)
       })
 
-      it("should not be able to double vote", async function () {
+      it("should update a vote", async function () {
         await votes.put({ voter: await voter1.getAddress(), tokens: 10 })
         await votes.put({ voter: await voter1.getAddress(), tokens: 20 })
 
         expect(await votes.all().length, 1)
+      })
+
+      it("should verify the outcome using voter's db", async function () {
+        await votes.put({ voter: await voter1.getAddress(), tokens: 10, selection: 1 })
+
+        const hash = await governor.hashVotes((await votes.all()).map(e => e.value))
+
+        const signedMessage = await proposer.signMessage(hash)
+
+        await governor.connect(proposer).ratify(proposalHash, signedMessage)
+
+
+        const ratification = await governor.proposals(await governor.proposalsIndex(0)).ratified
+
+        const expectedHash = await governor.hashVotes((await votes2.all()).map(e => e.value))
+
+        expect(hash, expectedHash)
       })
     })
   })
