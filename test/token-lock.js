@@ -31,7 +31,7 @@ describe("TokenLock", function () {
 
       await tokenLock.connect(voter1).lock(voter1, 100, 10)
 
-      expect(await tokenLock.canVote(voter1), true)
+      expect(await tokenLock.canVote(voter1, 10), true)
     });
   });
 })

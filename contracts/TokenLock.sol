@@ -23,8 +23,8 @@ contract TokenLock {
         stakes[voter] = Stake({ voter: voter, tokens: tokens, duration: duration });
     }
 
-    function canVote(address voter) public view returns (bool) {
+    function canVote(address voter, uint256 tokens) public view returns (bool) {
         Stake memory stake = stakes[voter];
-        return stake.tokens > 0 && stake.duration > block.number;
+        return stake.tokens > tokens && stake.duration > block.number;
     }
 }

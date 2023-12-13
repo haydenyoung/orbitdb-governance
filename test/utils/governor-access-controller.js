@@ -19,7 +19,7 @@ const GovernorAccessController = (contractAddress) => async ({ orbitdb, identiti
     const governor = await ethers.getContractAt('Governor', address.split('/').pop())
     const tokenLock = await ethers.getContractAt('TokenLock', await governor.lock())
 
-    const hasWriteAccess = await tokenLock.canVote(id) || await governor.owner() === id
+    const hasWriteAccess = await tokenLock.canVote(id, entry.payload.value.tokens) || await governor.owner() === id
 
     if (hasWriteAccess) {
       return identities.verifyIdentity(writerIdentity)

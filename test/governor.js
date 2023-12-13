@@ -126,6 +126,10 @@ describe("Governor", function () {
         expect((await votes.all()).length).to.equal(1)
       })
 
+      it("should not allow a vote with excess token weight", async function () {
+        await expect(votes2.put({ voter: await voter1.getAddress(), tokens: 1000, selection: 1 })).to.be.rejectedWith(/Could not append entry:\nKey \".+\" is not allowed to write to the log/)
+      })
+
       it("should verify the outcome using voter's db", async function () {
         await votes2.put({ voter: await voter1.getAddress(), tokens: 10, selection: 5 })
 
