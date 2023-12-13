@@ -1,4 +1,3 @@
-import { deployTokenLockFixture } from './fixtures/contracts.js'
 import pathJoin from './path-join.js'
 
 const type = 'governor'
@@ -17,9 +16,10 @@ const GovernorAccessController = (contractAddress) => async ({ orbitdb, identiti
 
     const { id } = writerIdentity
 
-    const tokenLock = await deployTokenLockFixture()
+    const governor = await ethers.getContractAt('Governor', address.split('/').pop())
+    const tokenLock = await ethers.getContractAt('TokenLock', await governor.lock())
 
-    const hasWriteAccess = await tokenLock.canVote(id) || orbitdb.identity.id == id
+    const hasWriteAccess = await tokenLock.canVote(id) || await governor.owner() === id
 
     if (hasWriteAccess) {
       return identities.verifyIdentity(writerIdentity)

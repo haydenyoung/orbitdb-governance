@@ -1,15 +1,23 @@
+import createOrbitDBInstance from './orbitdb.js'
+
 const [owner, proposer, voter1] = await ethers.getSigners()
 
-const deployGovernorFixture = async () => {
-  const Governor = await ethers.getContractFactory("Governor")
-  const governor = await Governor.deploy()
+async function deployGovernorFixture() {
+  const orbitdb = await createOrbitDBInstance('proposer', proposer)
 
-  return governor
+  const proposals = await orbitdb.open('proposal-1', { type: 'documents' })
+
+  const lock = await deployTokenLockFixture()
+
+  const Governor = await ethers.getContractFactory("Governor")
+  const governor = await Governor.connect(proposer).deploy(await lock.getAddress(), proposals.address)
+  await orbitdb.stop()
+  await orbitdb.ipfs.stop()
+
+  return [ governor, lock ]
 }
 
-const deployTokenLockFixture = async () => {
-  const [owner, proposer, voter1] = await ethers.getSigners()
-
+async function deployTokenLockFixture() {
   const TokenLock = await ethers.getContractFactory("TokenLock")
   const tokenLock = await TokenLock.deploy()
 

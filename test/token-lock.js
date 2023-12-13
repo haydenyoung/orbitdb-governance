@@ -1,7 +1,6 @@
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers.js";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs.js";
-import { expect } from "chai";
-import { createProposerOrbitDB  } from "./utils/fixtures/orbitdb.js"
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers.js"
+import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs.js"
+import { expect } from "chai"
 import { OrbitDBAccessController } from "@orbitdb/core"
 import { owner, proposer, voter1, deployTokenLockFixture } from './utils/fixtures/contracts.js'
 
