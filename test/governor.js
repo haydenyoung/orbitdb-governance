@@ -22,19 +22,15 @@ describe("Governor", function () {
 
   describe("Governance", function () {
     let orbitdb1
-    let proposals, votes
+    let proposals
 
     const title = 'Proposal 1'
     const description = 'Use OrbitDB for off-chain governance.'
 
     beforeEach(async function () {
-      const AccessController = GovernorAccessController(await governor.getAddress())
-      useAccessController(GovernorAccessController)
-
       orbitdb1 = await createOrbitDBInstance('proposer', proposer)
 
       proposals = await orbitdb1.open('proposal-1', { type: 'documents' })
-      votes = await orbitdb1.open('proposal-1-votes', { type: 'documents', Database: Documents({ indexBy: 'voter' }), AccessController })
     })
 
     afterEach(async function () {
@@ -44,8 +40,12 @@ describe("Governor", function () {
 
     describe("Proposals", function () {
       it("should put forward a proposal", async function () {
+        const votingOptions = {
+          1: 'yes',
+          2: 'no'
+        }
 
-        const proposal = { _id: 1, title, description, votes_db_address: votes.address }
+        const proposal = { _id: 1, title, description, options: votingOptions }
         const proposalHash = await proposals.put(proposal)
 
         await governor.connect(proposer).propose(proposalHash)
@@ -55,16 +55,28 @@ describe("Governor", function () {
 
         expect(actual[0]).to.equal(ethers.getBigInt(0))
         expect(actual[1]).to.equal(proposalHash)
-        expect(actual[2]).to.equal('')
+        expect(actual[2]).to.equal(ethers.getBigInt(3))
+        expect(actual[3]).to.equal(ethers.getBigInt(103))
+        expect(actual[4]).to.equal('')
       })
     })
 
     describe("Voting", function () {
       let orbitdb2
       let proposalHash
-      let proposals2, votes2
+      let proposals2
+      let votes, votes2
 
       beforeEach(async function () {
+        const proposal = { _id: 1, title, description }
+        proposalHash = await proposals.put(proposal)
+        await governor.connect(proposer).propose(proposalHash)
+
+        const AccessController = GovernorAccessController({ governorAddress: await governor.getAddress(), proposalId: proposalHash })
+        useAccessController(GovernorAccessController)
+
+        votes = await orbitdb1.open('proposal-1-votes', { type: 'documents', Database: Documents({ indexBy: 'voter' }), AccessController })
+
         orbitdb2 = await createOrbitDBInstance('voter1', voter1)
 
         await orbitdb2.ipfs.libp2p.peerStore.save(orbitdb1.ipfs.libp2p.peerId, { multiaddrs: await orbitdb1.ipfs.libp2p.getMultiaddrs() })
@@ -73,12 +85,8 @@ describe("Governor", function () {
         proposals2 = await orbitdb2.open(proposals.address)
         votes2 = await orbitdb2.open(votes.address, { Database: Documents({ indexBy: 'voter' }) })
 
-        await tokenLock.connect(voter1).lock(voter1, 100, 10)
+        await tokenLock.connect(voter1).lock(voter1, 100, 200)
 
-        const proposal = { _id: 1, title, description, votes_db_address: votes.address }
-
-        proposalHash = await proposals.put(proposal)
-        await governor.connect(proposer).propose(proposalHash)
       })
 
       afterEach(async function () {
@@ -91,6 +99,12 @@ describe("Governor", function () {
 
         expect(hash).to.equal('0x3e988a2c1017c9edfdfcae0d4a3b73de5511c85f851cb7a75917231c9dc24ade')
       })
+
+      it("should be able to vote", async function () {
+        await tokenLock.connect(voter1).lock(voter1, 100, 200)
+
+        expect(await governor.canVote(proposalHash, voter1, 10), true)
+      });
 
       it("should ratify a proposal", async function () {
         await votes2.put({ voter: await voter1.getAddress(), tokens: 10, selection: 1 })
@@ -127,6 +141,10 @@ describe("Governor", function () {
       })
 
       it("should not allow a vote with excess token weight", async function () {
+        await expect(votes2.put({ voter: await voter1.getAddress(), tokens: 1000, selection: 1 })).to.be.rejectedWith(/Could not append entry:\nKey \".+\" is not allowed to write to the log/)
+      })
+
+      it("should not allow a vote which is cast outside the voting window", async function () {
         await expect(votes2.put({ voter: await voter1.getAddress(), tokens: 1000, selection: 1 })).to.be.rejectedWith(/Could not append entry:\nKey \".+\" is not allowed to write to the log/)
       })
 

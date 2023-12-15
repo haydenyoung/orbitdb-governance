@@ -2,10 +2,21 @@ import pathJoin from './path-join.js'
 
 const type = 'governor'
 
-const GovernorAccessController = (contractAddress) => async ({ orbitdb, identities, address, name }) => {
-  if (contractAddress) {
-    address = contractAddress
-    address = pathJoin('/', type, address)
+const GovernorAccessController = ({ governorAddress, proposalId } = {}) => async ({ orbitdb, identities, address, name }) => {
+  if (governorAddress && proposalId) {
+    address = pathJoin('/', type, governorAddress, proposalId)
+  } else {
+    const parts = address.split('/')
+    proposalId = parts.pop()
+    governorAddress = parts.pop()
+  }
+
+  if (!governorAddress) {
+    throw new Exception('No governor contract specified')
+  }
+
+  if (!proposalId) {
+    throw new Exception("no proposalId specified")
   }
 
   const canAppend = async (entry) => {
@@ -16,10 +27,9 @@ const GovernorAccessController = (contractAddress) => async ({ orbitdb, identiti
 
     const { id } = writerIdentity
 
-    const governor = await ethers.getContractAt('Governor', address.split('/').pop())
-    const tokenLock = await ethers.getContractAt('TokenLock', await governor.lock())
+    const governor = await ethers.getContractAt('Governor', governorAddress)
 
-    const hasWriteAccess = await tokenLock.canVote(id, entry.payload.value.tokens) || await governor.owner() === id
+    const hasWriteAccess = await governor.canVote(proposalId, id, entry.payload.value.tokens) || await governor.owner() === id
 
     if (hasWriteAccess) {
       return identities.verifyIdentity(writerIdentity)

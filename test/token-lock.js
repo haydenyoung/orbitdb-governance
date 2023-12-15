@@ -24,14 +24,4 @@ describe("TokenLock", function () {
       expect(await tokenLock.stakes[voter1], expected)
     });
   });
-
-  describe("Voting", function () {
-    it("should be able to vote", async function () {
-      const tokenLock = await loadFixture(deployTokenLockFixture);
-
-      await tokenLock.connect(voter1).lock(voter1, 100, 10)
-
-      expect(await tokenLock.canVote(voter1, 10), true)
-    });
-  });
 })
