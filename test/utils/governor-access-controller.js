@@ -29,7 +29,7 @@ const GovernorAccessController = ({ governorAddress, proposalId } = {}) => async
 
     const governor = await ethers.getContractAt('Governor', governorAddress)
 
-    const hasWriteAccess = await governor.canVote(proposalId, id, entry.payload.value.tokens) || await governor.owner() === id
+    const hasWriteAccess = id === entry.payload.value.voter && await governor.canVote(proposalId, id, entry.payload.value.tokens)
 
     if (hasWriteAccess) {
       return identities.verifyIdentity(writerIdentity)

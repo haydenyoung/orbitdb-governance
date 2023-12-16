@@ -1,6 +1,6 @@
 import createOrbitDBInstance from './orbitdb.js'
 
-const [owner, proposer, voter1] = await ethers.getSigners()
+const [owner, proposer, voter1, voter2, voter3 ] = await ethers.getSigners()
 
 async function deployGovernorFixture() {
   const orbitdb = await createOrbitDBInstance('proposer', proposer)
@@ -28,6 +28,8 @@ export {
   owner,
   proposer,
   voter1,
+  voter2,
+  voter3,
   deployGovernorFixture,
   deployTokenLockFixture
 }

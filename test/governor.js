@@ -4,11 +4,20 @@ import { expect } from "chai";
 import { useAccessController, Documents } from "@orbitdb/core"
 import createOrbitDBInstance from "./utils/fixtures/orbitdb.js"
 import GovernorAccessController from './utils/governor-access-controller.js'
-import { owner, proposer, voter1, deployGovernorFixture, deployTokenLockFixture } from './utils/fixtures/contracts.js'
+import { owner, proposer, voter1, voter2, voter3, deployGovernorFixture, deployTokenLockFixture } from './utils/fixtures/contracts.js'
 import { rimraf } from 'rimraf'
 
 describe("Governor", function () {
+  const votingOptions = {
+    1: 'yes',
+    2: 'no'
+  }
+
   let governor, tokenLock
+
+  after(async function () {
+    await rimraf('./orbitdb')
+  })
 
   beforeEach(async function () {
     [ governor, tokenLock ]  = await loadFixture(deployGovernorFixture)
@@ -40,11 +49,6 @@ describe("Governor", function () {
 
     describe("Proposals", function () {
       it("should put forward a proposal", async function () {
-        const votingOptions = {
-          1: 'yes',
-          2: 'no'
-        }
-
         const proposal = { _id: 1, title, description, options: votingOptions }
         const proposalHash = await proposals.put(proposal)
 
@@ -86,7 +90,6 @@ describe("Governor", function () {
         votes2 = await orbitdb2.open(votes.address, { Database: Documents({ indexBy: 'voter' }) })
 
         await tokenLock.connect(voter1).lock(voter1, 100, 200)
-
       })
 
       afterEach(async function () {
@@ -148,30 +151,101 @@ describe("Governor", function () {
         await expect(votes2.put({ voter: await voter1.getAddress(), tokens: 1000, selection: 1 })).to.be.rejectedWith(/Could not append entry:\nKey \".+\" is not allowed to write to the log/)
       })
 
-      it("should verify the outcome using voter's db", async function () {
-        await votes2.put({ voter: await voter1.getAddress(), tokens: 10, selection: 5 })
+      describe('Tallying results', function () {
+        let orbitdb3, orbitdb4
+        let votes3, votes4
 
-        await new Promise((resolve, reject) => {
-          const interval = setInterval(async () => {
-            const records = await votes.all()
-            if (records.length === 1) {
-              clearInterval(interval)
-              resolve()
-            }
-          }, 1000)
+        beforeEach(async function () {
+          orbitdb3 = await createOrbitDBInstance('voter2', voter2)
+
+          await orbitdb3.ipfs.libp2p.peerStore.save(orbitdb1.ipfs.libp2p.peerId, { multiaddrs: await orbitdb1.ipfs.libp2p.getMultiaddrs() })
+          await orbitdb3.ipfs.libp2p.dial(orbitdb1.ipfs.libp2p.peerId)
+
+          votes3 = await orbitdb3.open(votes.address, { Database: Documents({ indexBy: 'voter' }) })
+
+          orbitdb4 = await createOrbitDBInstance('voter3', voter3)
+
+          await orbitdb4.ipfs.libp2p.peerStore.save(orbitdb1.ipfs.libp2p.peerId, { multiaddrs: await orbitdb1.ipfs.libp2p.getMultiaddrs() })
+          await orbitdb4.ipfs.libp2p.dial(orbitdb1.ipfs.libp2p.peerId)
+
+          votes4 = await orbitdb4.open(votes.address, { Database: Documents({ indexBy: 'voter' }) })
         })
 
-        const hash = await governor.hashVotes((await votes.all()).map(e => e.value))
+        afterEach(async function () {
+          await orbitdb3.stop()
+          await orbitdb4.stop()
 
-        const signedMessage = await proposer.signMessage(hash)
+          await rimraf('./orbitdb/voter2')
+          await rimraf('./orbitdb/voter3')
+        })
 
-        await governor.connect(proposer).ratify(proposalHash, signedMessage)
+        it("should count the votes and save the results", async function () {
+          await votes2.put({ voter: voter1.address, tokens: 10, selection: 1 })
 
-        const ratification = (await governor.proposals(await governor.proposalsIndex(0))).ratified
+          await tokenLock.connect(voter2).lock(voter2, 100, 200)
 
-        const expectedHash = await governor.hashVotes((await votes2.all()).map(e => e.value))
+          await votes3.put({ voter: voter2.address, tokens: 10, selection: 1 })
 
-        expect(hash).to.equal(expectedHash)
+          await tokenLock.connect(voter3).lock(voter3, 100, 200)
+
+          await votes4.put({ voter: voter3.address, tokens: 10, selection: 2 })
+
+          await new Promise((resolve, reject) => {
+            const interval = setInterval(async () => {
+              const records = await votes.all()
+              if (records.length === 3) {
+                clearInterval(interval)
+                resolve()
+              }
+            }, 1000)
+          })
+
+          const ballotCount = {}
+
+          Object.keys(votingOptions).forEach(key => {
+            ballotCount[key] = 0
+          })
+
+          for await (const v of votes.iterator()) {
+            if (Object.keys(votingOptions).some(option => parseInt(option) === parseInt(v.value.selection))) {
+              ballotCount[v.value.selection] += parseInt(v.value.tokens)
+            }
+          }
+
+          expect(ballotCount).is.deep.equal({ '1': 20, '2': 10 })
+        })
+
+        it("should verify the outcome using voter's db", async function () {
+          await votes2.put({ voter: await voter1.getAddress(), tokens: 10, selection: 5 })
+
+          await new Promise((resolve, reject) => {
+            const interval = setInterval(async () => {
+              const records = await votes.all()
+              if (records.length === 1) {
+                clearInterval(interval)
+                resolve()
+              }
+            }, 1000)
+          })
+
+          const hash = await governor.hashVotes((await votes.all()).map(e => e.value))
+
+          const signedMessage = await proposer.signMessage(hash)
+
+          await governor.connect(proposer).ratify(proposalHash, signedMessage)
+
+          const ratification = (await governor.proposals(await governor.proposalsIndex(0))).ratified
+
+          const expectedHash = await governor.hashVotes((await votes2.all()).map(e => e.value))
+
+          expect(hash).to.equal(expectedHash)
+        })
+
+        it("should not hijack the vote of another voter", async function () {
+          await tokenLock.connect(voter2).lock(voter2, 100, 200)
+
+          await expect(votes2.put({ voter: voter2.address, tokens: 1000, selection: 1 })).to.be.rejectedWith(/Could not append entry:\nKey \".+\" is not allowed to write to the log/)
+        })
       })
     })
   })
