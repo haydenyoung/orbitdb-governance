@@ -20,11 +20,11 @@ The proposer "puts up" a proposal which will introduce a new governing rule, cha
 
 Before voting, community members must stake tokens to indicate their intention to participate. A voter can not vote if they have not staked tokens for a duration that exceeds the duration of the proposal's voting period.
 
-Community members will be able to review the proposal's details and submit a vote based on the proposal's available options. Votes are stored off-chain in the community member's copy of the votes database. If the vote is valid, it will be replicated across other databases held by the proposer and other voters. Voters will only be able to vote up to the number of tokens (voting weight) they have staked. Voters cannot change their voting weight once a vote has been cast.
+Community members will be able to review the proposal's details and submit a vote based on the proposal's available options. Votes are stored off-chain in the community member's copy of the votes database. If the vote is valid, it will be replicated across other databases held by the proposer and other voters. The voter's stake will dictate the voting weight they have in a vote.
 
 Once the voting period has expired, voters will no longer be able to cast a vote.
 
-Once the voting period has ended, the proposer must hash the voting results using their copy of the votes database. The vote count will take place off-chain and the resulting vote count will be published to the contract.
+Once the voting period has ended, the proposer must hash the voting results using their copy of the votes database. The vote count will take place off-chain and the resulting vote count will be written to the proposals database record which is identified by the proposalId.
 
 An election audit can be carried out by anyone who has staked tokens prior to, during and after the completion of the proposal's vote count. This election audit will execute the same off-chain vote count as used by the proposer. If there is a discrepancy, the auditor can contest the validity of the vote during the dispute period. If a threshold set prior to the voting period is reached, the proposal is voided and the proposal must either be discarded or resubmitted for a new vote.
 
