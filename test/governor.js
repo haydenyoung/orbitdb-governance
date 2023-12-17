@@ -1,5 +1,4 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers.js";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs.js";
 import { expect } from "chai";
 import { useAccessController, Documents } from "@orbitdb/core"
 import createOrbitDBInstance from "./utils/fixtures/orbitdb.js"
@@ -59,8 +58,8 @@ describe("Governor", function () {
 
         expect(actual[0]).to.equal(ethers.getBigInt(0))
         expect(actual[1]).to.equal(proposalHash)
-        expect(actual[2]).to.equal(ethers.getBigInt(3))
-        expect(actual[3]).to.equal(ethers.getBigInt(103))
+        expect(actual[2]).to.equal(ethers.getBigInt(10))
+        expect(actual[3]).to.equal(ethers.getBigInt(110))
         expect(actual[4]).to.equal('')
       })
     })

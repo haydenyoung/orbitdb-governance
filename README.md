@@ -26,7 +26,7 @@ Once the voting period has expired, voters will no longer be able to cast a vote
 
 Once the voting period has ended, the proposer must hash the voting results using their copy of the votes database. The vote count will take place off-chain and the resulting vote count will be written to the proposals database record which is identified by the proposalId.
 
-An election audit can be carried out by anyone who has staked tokens prior to, during and after the completion of the proposal's vote count. This election audit will execute the same off-chain vote count as used by the proposer. If there is a discrepancy, the auditor can contest the validity of the vote during the dispute period. If a threshold set prior to the voting period is reached, the proposal is voided and the proposal must either be discarded or resubmitted for a new vote.
+An election audit can be carried out by anyone who has staked tokens prior to, during and after the completion of the proposal's vote count. This election audit will execute the same off-chain vote count as used by the proposer. If there is a discrepancy, the auditor can contest the validity of the vote during the dispute period. If a threshold, set prior to the voting period, is reached, the proposal is voided and the proposal must either be discarded or resubmitted for a new vote.
 
 **The process outlined above describes a simple governance process as a starting point. Good governance is a complex and nuanced process which requires a great deal of thought and consideration. Rather, the idea is to provide an example of off-chain peer-to-peer voting which can be extended and customized for real world implementation.**
 

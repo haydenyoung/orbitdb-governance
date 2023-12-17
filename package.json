@@ -3,6 +3,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^0.11.2",
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^5.0.1",
     "@orbitdb/core": "github:orbitdb/orbitdb#helia",
     "@orbitdb/identity-provider-ethereum": "^1.0.0",
     "hardhat": "^2.19.1",

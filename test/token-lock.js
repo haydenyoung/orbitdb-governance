@@ -7,15 +7,15 @@ import { owner, proposer, voter1, deployTokenLockFixture } from './utils/fixture
 describe("TokenLock", function () {
   describe("Deployment", function () {
     it("should set the right owner", async function () {
-      const tokenLock = await loadFixture(deployTokenLockFixture);
+      const [ tokenLock ] = await loadFixture(deployTokenLockFixture);
 
-      expect(await tokenLock.owner()).to.equal(owner.address);
+      expect(await tokenLock.owner()).to.equal(proposer.address);
     });
   });
 
   describe("Staking", function () {
     it("should lock some tokens", async function () {
-      const tokenLock = await loadFixture(deployTokenLockFixture);
+      const [ tokenLock ] = await loadFixture(deployTokenLockFixture);
 
       await tokenLock.connect(voter1).lock(voter1, 100, 10)
 
