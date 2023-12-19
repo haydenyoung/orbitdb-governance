@@ -241,6 +241,40 @@ describe("Governor", function () {
 
           await expect(votes2.put({ voter: voter2.address, tokens: 1000, selection: 1 })).to.be.rejectedWith(/Could not append entry:\nKey \".+\" is not allowed to write to the log/)
         })
+
+        describe('Contest results', function () {
+          it("should contest a vote", async function () {
+            await votes2.put({ voter: voter1.address, tokens: 10, selection: 5 })
+
+            await new Promise((resolve, reject) => {
+              const interval = setInterval(async () => {
+                const records = await votes.all()
+                if (records.length === 1) {
+                  clearInterval(interval)
+                  resolve()
+                }
+              }, 1000)
+            })
+
+            const hash = await governor.hashVotes((await votes.all()).map(e => e.value))
+
+            await governor.connect(proposer).publishVotes(proposalHash, hash)
+
+            const contestHash = await governor.hashVotes([{ voter: await voter1.getAddress(), tokens: 11, selection: 5 }])
+
+            await governor.connect(voter1).contest(proposalHash, contestHash)
+
+            const abiCoder = new ethers.AbiCoder()
+
+            const contests = []
+            const proposalHashBytes32 = ethers.keccak256(abiCoder.encode(['string'], [proposalHash]))
+            for (let i = 0; i < await governor.contestCount(proposalHashBytes32); i++) {
+              contests.push(await governor.contests(proposalHashBytes32, i))
+            }
+
+            expect(contests).to.deep.equal([[voter1.address, contestHash]])
+          })
+        })
       })
     })
   })

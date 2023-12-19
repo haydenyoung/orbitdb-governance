@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./TokenLock.sol";
 
 // Uncomment this line to use console.log
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 contract Governor is Ownable {
     string public db;
@@ -26,8 +26,16 @@ contract Governor is Ownable {
         uint256 selection;
     }
 
+    struct Contest {
+        address voter;
+        string votes;
+    }
+
     bytes32[] public proposalsIndex;
     mapping (bytes32 => Proposal) public proposals;
+
+    mapping (bytes32 => uint256) public contestCount;
+    mapping (bytes32 => Contest[]) public contests;
 
     constructor(address lock_, string memory db_) Ownable(msg.sender) {
         lock = lock_;
@@ -54,16 +62,31 @@ contract Governor is Ownable {
         return 100;
     }
 
-    function publishVotes(string calldata proposalHash, string calldata hashedVotes) onlyOwner public {
-        proposals[keccak256(abi.encode(proposalHash))].votes = hashedVotes;
+    function contestPeriod() public pure returns (uint256) {
+        return 5;
+    }
+
+    function publishVotes(string calldata proposalId, string calldata hashedVotes) onlyOwner public {
+        proposals[keccak256(abi.encode(proposalId))].votes = hashedVotes;
+    }
+
+    function contest(string calldata proposalId, string calldata hashedVotes) public {
+        TokenLock tokenLock = TokenLock(lock);
+        (address voter, uint256 tokens, ) = tokenLock.stakes(msg.sender);
+
+        require(!canContest(voter, tokens), "Governor: cannot contest");
+
+        bytes32 proposalHash = keccak256(abi.encode(proposalId));
+
+        contests[proposalHash].push(Contest(voter, hashedVotes));
+        contestCount[proposalHash] = contests[proposalHash].length;
     }
 
     function hashVotes(Vote[] memory votes) public pure returns (bytes32) {
         return keccak256(abi.encode(votes));
     }
 
-    function canVote(string calldata proposalId, address voter, uint256 tokens) public view returns (bool) {
-        Proposal memory proposal = proposals[keccak256(abi.encode(proposalId))];
+    function canContest(address voter, uint256 tokens) public view returns (bool) {
         TokenLock tokenLock = TokenLock(lock);
         // Stake memory stake = tokenLock.stakes(voter);
         (address voter_, uint256 tokens_, uint256 duration_) = tokenLock.stakes(voter);
@@ -72,6 +95,19 @@ contract Governor is Ownable {
 
         return
             stake.tokens > tokens &&
+            stake.duration > contestPeriod();
+    }
+
+    function canVote(string calldata proposalId, address voter_, uint256 tokens_) public view returns (bool) {
+        Proposal memory proposal = proposals[keccak256(abi.encode(proposalId))];
+        TokenLock tokenLock = TokenLock(lock);
+        // Stake memory stake = tokenLock.stakes(voter);
+        (address voter, uint256 tokens, uint256 duration) = tokenLock.stakes(voter_);
+
+        Stake memory stake = Stake({ voter: voter, tokens: tokens, duration: duration });
+
+        return
+            stake.tokens > tokens_ &&
             proposal.snapshot < block.number &&
             stake.duration > proposal.duration;
     }
