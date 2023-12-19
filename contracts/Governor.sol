@@ -17,6 +17,7 @@ contract Governor is Ownable {
         string proposalId;
         uint256 snapshot;
         uint256 duration;
+        uint256 contest;
         string votes;
     }
 
@@ -49,9 +50,10 @@ contract Governor is Ownable {
 
         uint256 snapshot = block.number + votingDelay();
         uint256 duration = snapshot + votingPeriod();
+        uint256 contest = duration + contestPeriod();
 
         proposalsIndex.push(proposalHash);
-        proposals[proposalHash] = Proposal(proposalsIndex.length - 1, proposalId, snapshot, duration, "");
+        proposals[proposalHash] = Proposal(proposalsIndex.length - 1, proposalId, snapshot, duration, contest, "");
     }
 
     function votingDelay() public pure returns (uint256) {
@@ -74,7 +76,7 @@ contract Governor is Ownable {
         TokenLock tokenLock = TokenLock(lock);
         (address voter, uint256 tokens, ) = tokenLock.stakes(msg.sender);
 
-        require(!canContest(voter, tokens), "Governor: cannot contest");
+        require(!canContest(proposalId, voter, tokens), "Governor: cannot contest");
 
         bytes32 proposalHash = keccak256(abi.encode(proposalId));
 
@@ -86,29 +88,31 @@ contract Governor is Ownable {
         return keccak256(abi.encode(votes));
     }
 
-    function canContest(address voter, uint256 tokens) public view returns (bool) {
+    function canContest(string calldata proposalId, address voter_, uint256 tokens_) public view returns (bool) {
         TokenLock tokenLock = TokenLock(lock);
         // Stake memory stake = tokenLock.stakes(voter);
-        (address voter_, uint256 tokens_, uint256 duration_) = tokenLock.stakes(voter);
+        (address voter, uint256 tokens, uint256 end ) = tokenLock.stakes(voter_);
 
-        Stake memory stake = Stake({ voter: voter_, tokens: tokens_, duration: duration_ });
+        TokenLock.Stake memory stake = TokenLock.Stake({ voter: voter, tokens: tokens, end: end });
+
+        Proposal memory proposal = proposals[keccak256(abi.encode(proposalId))];
 
         return
             stake.tokens > tokens &&
-            stake.duration > contestPeriod();
+            stake.end > proposal.contest;
     }
 
     function canVote(string calldata proposalId, address voter_, uint256 tokens_) public view returns (bool) {
         Proposal memory proposal = proposals[keccak256(abi.encode(proposalId))];
         TokenLock tokenLock = TokenLock(lock);
         // Stake memory stake = tokenLock.stakes(voter);
-        (address voter, uint256 tokens, uint256 duration) = tokenLock.stakes(voter_);
+        (address voter, uint256 tokens, uint256 end) = tokenLock.stakes(voter_);
 
-        Stake memory stake = Stake({ voter: voter, tokens: tokens, duration: duration });
+        TokenLock.Stake memory stake = TokenLock.Stake({ voter: voter, tokens: tokens, end: end });
 
         return
             stake.tokens > tokens_ &&
             proposal.snapshot < block.number &&
-            stake.duration > proposal.duration;
+            stake.end > proposal.duration;
     }
 }

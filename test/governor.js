@@ -60,7 +60,8 @@ describe("Governor", function () {
         expect(actual[1]).to.equal(proposalHash)
         expect(actual[2]).to.equal(ethers.getBigInt(10))
         expect(actual[3]).to.equal(ethers.getBigInt(110))
-        expect(actual[4]).to.equal('')
+        expect(actual[4]).to.equal(ethers.getBigInt(115))
+        expect(actual[5]).to.equal('')
       })
     })
 
@@ -88,7 +89,7 @@ describe("Governor", function () {
         proposals2 = await orbitdb2.open(proposals.address)
         votes2 = await orbitdb2.open(votes.address, { Database: Documents({ indexBy: 'voter' }) })
 
-        await tokenLock.connect(voter1).lock(voter1, 100, 200)
+        await tokenLock.connect(voter1).lock(100, 200)
       })
 
       afterEach(async function () {
@@ -103,7 +104,7 @@ describe("Governor", function () {
       })
 
       it("should be able to vote", async function () {
-        await tokenLock.connect(voter1).lock(voter1, 100, 200)
+        await tokenLock.connect(voter1).lock(100, 200)
 
         expect(await governor.canVote(proposalHash, voter1, 10), true)
       });
@@ -179,11 +180,11 @@ describe("Governor", function () {
         it("should count the votes and save the results", async function () {
           await votes2.put({ voter: voter1.address, tokens: 10, selection: 1 })
 
-          await tokenLock.connect(voter2).lock(voter2, 100, 200)
+          await tokenLock.connect(voter2).lock(100, 200)
 
           await votes3.put({ voter: voter2.address, tokens: 10, selection: 1 })
 
-          await tokenLock.connect(voter3).lock(voter3, 100, 200)
+          await tokenLock.connect(voter3).lock(100, 200)
 
           await votes4.put({ voter: voter3.address, tokens: 10, selection: 2 })
 
@@ -237,7 +238,7 @@ describe("Governor", function () {
         })
 
         it("should not hijack the vote of another voter", async function () {
-          await tokenLock.connect(voter2).lock(voter2, 100, 200)
+          await tokenLock.connect(voter2).lock(100, 200)
 
           await expect(votes2.put({ voter: voter2.address, tokens: 1000, selection: 1 })).to.be.rejectedWith(/Could not append entry:\nKey \".+\" is not allowed to write to the log/)
         })
