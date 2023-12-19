@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 import "./TokenLock.sol";
 
 // Uncomment this line to use console.log
 import "hardhat/console.sol";
 
-contract Governor {
-    address public owner;
+contract Governor is Ownable {
     string public db;
     address public lock;
 
@@ -16,7 +17,7 @@ contract Governor {
         string proposalId;
         uint256 snapshot;
         uint256 duration;
-        string ratified;
+        string votes;
     }
 
     struct Vote {
@@ -28,17 +29,14 @@ contract Governor {
     bytes32[] public proposalsIndex;
     mapping (bytes32 => Proposal) public proposals;
 
-    constructor(address lock_, string memory db_) {
-        owner = msg.sender;
+    constructor(address lock_, string memory db_) Ownable(msg.sender) {
         lock = lock_;
         db = db_;
     }
 
-    function propose(string calldata proposalId) public
+    function propose(string calldata proposalId) onlyOwner public
     {
         bytes32 proposalHash = keccak256(abi.encode(proposalId));
-
-        require(msg.sender == owner, "Governor: proposer must be owner");
         require(proposals[proposalHash].index == 0, "Governor: proposal already exists");
 
         uint256 snapshot = block.number + votingDelay();
@@ -56,8 +54,8 @@ contract Governor {
         return 100;
     }
 
-    function ratify(string calldata proposalHash, string calldata signedVotes) public {
-        proposals[keccak256(abi.encode(proposalHash))].ratified = signedVotes;
+    function publishVotes(string calldata proposalHash, string calldata hashedVotes) onlyOwner public {
+        proposals[keccak256(abi.encode(proposalHash))].votes = hashedVotes;
     }
 
     function hashVotes(Vote[] memory votes) public pure returns (bytes32) {

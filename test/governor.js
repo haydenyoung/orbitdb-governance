@@ -108,19 +108,17 @@ describe("Governor", function () {
         expect(await governor.canVote(proposalHash, voter1, 10), true)
       });
 
-      it("should ratify a proposal", async function () {
+      it("should publish votes", async function () {
         await votes2.put({ voter: await voter1.getAddress(), tokens: 10, selection: 1 })
 
-        const hash = await governor.hashVotes((await votes.all()).map(e => e.value))
+        const votesHash = await governor.hashVotes((await votes.all()).map(e => e.value))
 
-        const signedMessage = await proposer.signMessage(hash)
-
-        await governor.connect(proposer).ratify(proposalHash, signedMessage)
+        await governor.connect(proposer).publishVotes(proposalHash, votesHash)
 
         const abiCoder = new ethers.AbiCoder()
-        const ratification = (await governor.proposals(ethers.keccak256(abiCoder.encode(['string'], [proposalHash])))).ratified
+        const finalVotes = (await governor.proposals(ethers.keccak256(abiCoder.encode(['string'], [proposalHash])))).votes
 
-        expect(ratification).to.equal(signedMessage)
+        expect(finalVotes).to.equal(votesHash)
       })
 
       it("should update a vote", async function () {
@@ -229,15 +227,13 @@ describe("Governor", function () {
 
           const hash = await governor.hashVotes((await votes.all()).map(e => e.value))
 
-          const signedMessage = await proposer.signMessage(hash)
+          await governor.connect(proposer).publishVotes(proposalHash, hash)
 
-          await governor.connect(proposer).ratify(proposalHash, signedMessage)
-
-          const ratification = (await governor.proposals(await governor.proposalsIndex(0))).ratified
+          const finalVotes = (await governor.proposals(await governor.proposalsIndex(0))).votes
 
           const expectedHash = await governor.hashVotes((await votes2.all()).map(e => e.value))
 
-          expect(hash).to.equal(expectedHash)
+          expect(finalVotes).to.equal(expectedHash)
         })
 
         it("should not hijack the vote of another voter", async function () {
