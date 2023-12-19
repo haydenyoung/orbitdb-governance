@@ -30,6 +30,10 @@ An election audit can be carried out by anyone who has staked tokens prior to, d
 
 **The process outlined above describes a simple governance process as a starting point. Good governance is a complex and nuanced process which requires a great deal of thought and consideration. Rather, the idea is to provide an example of off-chain peer-to-peer voting which can be extended and customized for real world implementation.**
 
+## TODO
+
+- Delegate tokens for users wishing to defer decision-making to another user.
+
 ## Installation
 
 Download from Github:
