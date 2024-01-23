@@ -3,7 +3,7 @@ import { createLibp2p } from 'libp2p'
 import { tcp } from '@libp2p/tcp'
 import { webSockets } from '@libp2p/websockets'
 import { yamux } from '@chainsafe/libp2p-yamux'
-import { identifyService } from 'libp2p/identify'
+import { identify } from '@libp2p/identify'
 import { gossipsub } from '@chainsafe/libp2p-gossipsub'
 import { noise } from '@chainsafe/libp2p-noise'
 import { MemoryDatastore } from 'datastore-core'
@@ -33,7 +33,7 @@ export default async (id, wallet) => {
       yamux()
     ],
     services: {
-      identify: identifyService(),
+      identify: identify(),
       pubsub: gossipsub({ allowPublishToZeroPeers: true })
     }
   }

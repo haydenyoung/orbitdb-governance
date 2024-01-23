@@ -1,13 +1,14 @@
 {
   "type": "module",
   "devDependencies": {
+    "@libp2p/identify": "^1.0.11",
     "@nomicfoundation/hardhat-ignition": "^0.11.2",
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "@openzeppelin/contracts": "^5.0.1",
-    "@orbitdb/core": "github:orbitdb/orbitdb#helia",
+    "@orbitdb/core": "^2.0.1",
     "@orbitdb/identity-provider-ethereum": "^1.0.0",
     "hardhat": "^2.19.1",
-    "helia": "^2.1.0",
+    "helia": "^3.0.1",
     "rimraf": "^5.0.5"
   }
 }
