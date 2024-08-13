@@ -16,7 +16,7 @@ Any feedback is welcome. This is an open source project offered as a base to ong
 
 A person or an organization wants to propose ideas, concepts and updates to their community and allow their members to decide on which proposals are implemented. Community members are issued tokens which provide them with voting "weight". This concept is known as tokenized governance and incentivizes the community to participate in the voting process as they have a direct influence on decision-making.  
 
-The proposer "puts up" a proposal which will introduce a new governing rule, change an existing one or annul an obsolete one. Details about the proposal are provided and the proposal is officially "put forward" using a Governance smart contract. The proposer also provides a starting time and duration for the proposal's voting period. The proposal's details are captured to a local database which can be replicated by other community members. The proposal also includes options which can be selected by the voter. These options could consist of a simple "Yes"/"No" or could be more numerous or be more descriptive.
+The proposer submits a proposal which will introduce a new governing rule, change an existing one or annul an obsolete one. Details about the proposal are provided and the proposal is officially "put forward" using a Governance smart contract. The proposer also provides a starting time and duration for the proposal's voting period. The proposal's details are captured to a local database which can be replicated by other community members. The proposal also includes options which can be selected by the voter. These options could consist of a simple "Yes"/"No" or could be more numerous or be more descriptive.
 
 Before voting, community members must stake tokens to indicate their intention to participate. A voter can not vote if they have not staked tokens for a duration that exceeds the duration of the proposal's voting period.
 
@@ -39,7 +39,7 @@ An election audit can be carried out by anyone who has staked tokens prior to, d
 Download from Github:
 
 ```
-git clone https://github.com/haydenyoung/metacoin.git
+git clone https://github.com/haydenyoung/orbitdb-governance.git
 ```
 
 Install dependencies:
